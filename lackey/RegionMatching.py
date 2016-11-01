@@ -15,6 +15,7 @@ from .PlatformManagerWindows import PlatformManagerWindows
 from .Exceptions import FindFailed
 from .Settings import Settings, Debug
 from .TemplateMatchers import PyramidTemplateMatcher as TemplateMatcher 
+from .OCR import OCR
 
 if platform.system() == "Windows":
 	PlatformManager = PlatformManagerWindows() # No other input managers built yet
@@ -319,6 +320,7 @@ class Region(object):
 		"""
 		region = self
 		haystack = self.getBitmap()
+		print type(haystack)
 		if isinstance(region, Match):
 			cv2.circle(haystack, (region.getTarget().x - self.x, region.getTarget().y - self.y), 5, 255)
 		if haystack.shape[0] > (Screen(0).getBounds()[2]/2) or haystack.shape[1] > (Screen(0).getBounds()[3]/2):
@@ -366,33 +368,44 @@ class Region(object):
 		if not isinstance(pattern, Pattern):
 			if not isinstance(pattern, basestring):
 				raise TypeError("find expected a string [image path] or Pattern object")
-			pattern = Pattern(pattern)
-		needle = cv2.imread(pattern.path)
-		if needle is None:
-			raise ValueError("Unable to load image '{}'".format(pattern.path))
-		needle_height, needle_width, needle_channels = needle.shape
-		positions = []
-		timeout = time.time() + seconds
+			if os.path.isfile(pattern):
+				# Path to image pattern
+				pattern = Pattern(pattern)
 
-		# Check TemplateMatcher for valid matches
-		matches = []
-		while time.time() < timeout and len(matches) == 0:
-			matcher = TemplateMatcher(r.getBitmap())
-			matches = matcher.findAllMatches(needle,pattern.similarity)
-			time.sleep(self._defaultScanRate)
+		if isinstance(pattern, Pattern):
+			# Image search
+			needle = cv2.imread(pattern.path)
+			if needle is None:
+				raise ValueError("Unable to load image '{}'".format(pattern.path))
+			needle_height, needle_width, needle_channels = needle.shape
+			positions = []
+			timeout = time.time() + seconds
+
+			# Check TemplateMatcher for valid matches
+			matches = []
+			while time.time() < timeout and len(matches) == 0:
+				matcher = TemplateMatcher(r.getBitmap())
+				matches = matcher.findAllMatches(needle,pattern.similarity)
+				time.sleep(self._defaultScanRate)
+			offset = pattern.offset
+		else:
+			# OCR phrase search
+			ocr = OCR(Image.fromarray(self.getBitmap()))
+			matches = ocr.find_phrase(pattern, True)
+			offset = Location(0,0)
 		
 		if len(matches) == 0:
-			Debug.info("Couldn't find '{}' with enough similarity.".format(pattern.path))
+			Debug.info("Couldn't find '{}' with enough similarity.".format(pattern))
 			return iter([])
 
 		# Matches found! Turn them into Match objects
 		lastMatches = []
 		for match in matches:
-			position, confidence = match
+			position, match_size, confidence = match
 			x, y = position
-			lastMatches.append(Match(confidence, pattern.offset, ((x+self.x, y+self.y), (needle_width, needle_height))))
+			lastMatches.append(Match(confidence, offset, ((x+self.x, y+self.y), match_size)))
 		self._lastMatches = iter(lastMatches)
-		Debug.info("Found match(es) for pattern '{}' at similarity ({})".format(pattern.path, pattern.similarity))
+		Debug.info("Found match(es) for pattern '{}'".format(pattern))
 		self._lastMatchTime = (time.time() - find_time) * 1000 # Capture find time in milliseconds
 		return self._lastMatches
 
@@ -470,30 +483,46 @@ class Region(object):
 		if not isinstance(pattern, Pattern):
 			if not isinstance(pattern, basestring):
 				raise TypeError("find expected a string [image path] or Pattern object")
-			pattern = Pattern(pattern)
-		needle = cv2.imread(pattern.path)
-		if needle is None:
-			raise ValueError("Unable to load image '{}'".format(pattern.path))
-		needle_height, needle_width, needle_channels = needle.shape
-		match = None
-		timeout = time.time() + seconds
+			if os.path.isfile(pattern):
+				pattern = Pattern(pattern)
 
-		# Consult TemplateMatcher to find needle
-		while not match and time.time() < timeout:
-			matcher = TemplateMatcher(r.getBitmap())
-			match = matcher.findBestMatch(needle,pattern.similarity)
-			time.sleep(self._defaultScanRate)
+		if isinstance(pattern, Pattern):
+			# Image search
+			needle = cv2.imread(pattern.path)
+			if needle is None:
+				raise ValueError("Unable to load image '{}'".format(pattern.path))
+			needle_height, needle_width, needle_channels = needle.shape
+			match = None
+			timeout = time.time() + seconds
+
+			# Consult TemplateMatcher to find needle
+			while not match and time.time() < timeout:
+				matcher = TemplateMatcher(r.getBitmap())
+				match = matcher.findBestMatch(needle,pattern.similarity)
+				time.sleep(self._defaultScanRate)
+			offset = pattern.offset
+			match_size = (needle_width, needle_height)
+		else:
+			# OCR search
+			ocr = OCR(Image.fromarray(self.getBitmap()))
+			matches = ocr.find_phrase(pattern)
+			
+			if len(matches):
+				match = matches[0]
+				offset = Location(0,0)
+			else:
+				match = None
 
 		if match is None:
-			Debug.info("Couldn't find '{}' with enough similarity.".format(pattern.path))
+			Debug.info("Couldn't find '{}' with enough similarity.".format(pattern))
 			return None
 
 		# Translate local position into global screen position
-		position, confidence = match
+		position, match_size, confidence = match
 		position = (position[0] + self.x, position[1] + self.y)
-		self._lastMatch = Match(confidence, pattern.offset, (position, (needle_width, needle_height)))
+		self._lastMatch = Match(confidence, offset, (position, match_size))
 		#self._lastMatch.debug_preview()
-		Debug.info("Found match for pattern '{}' at ({},{}) with confidence ({}). Target at ({},{})".format(pattern.path, self._lastMatch.getX(), self._lastMatch.getY(), self._lastMatch.getScore(), self._lastMatch.getTarget().x, self._lastMatch.getTarget().y))
+		Debug.info("Found match for pattern '{}' at ({},{}) with confidence ({}). Target at ({},{})".format(pattern, self._lastMatch.getX(), self._lastMatch.getY(), self._lastMatch.getScore(), self._lastMatch.getTarget().x, self._lastMatch.getTarget().y))
 		self._lastMatchTime = (time.time() - find_time) * 1000 # Capture find time in milliseconds
 		return self._lastMatch
 
@@ -736,8 +765,9 @@ class Region(object):
 		""" Returns the contents of the clipboard (can be used to pull outside text into the application) """
 		return PlatformManager.getClipboard()
 	def text(self):
-		""" OCR method. Todo. """
-		raise NotImplementedError("OCR not yet supported")
+		""" Uses ``Tesseract`` with ``pyocr`` to grab text from this region of the screen """
+
+		return OCR(Image.fromarray(self.getBitmap())).get_text()
 
 	def mouseDown(self, button):
 		""" Low-level mouse actions. Todo """
@@ -976,7 +1006,7 @@ class Match(Region):
 		return self.getCenter().offset(self._target.x, self._target.y)
 
 	def __repr__(self):
-		return "Match[{},{} {}x{}] score={.2f}, target={}".format(self.x, self.y, self.w, self.h, self._score, self.target.getTuple())
+		return "Match[{},{} {}x{}] score={:2f}, target={}".format(self.x, self.y, self.w, self.h, self._score, self._target.getTuple())
 
 class Screen(Region):
 	""" Individual screen objects can be created for each monitor in a multi-monitor system. 
