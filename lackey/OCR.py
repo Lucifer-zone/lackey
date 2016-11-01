@@ -1,4 +1,5 @@
 from PIL import Image
+from .Settings import Debug
 import pyocr
 
 class OCR(object):
@@ -10,13 +11,13 @@ class OCR(object):
 		if len(tools) == 0:
 			raise NotImplementedError("No OCR software found - please install Tesseract OCR")
 		self.tool = tools[0]
-		#Debug.log(3, "Using OCR tool {}".format(tool.get_name()))
+		Debug.log(3, "Using OCR tool {}".format(self.tool.get_name()))
 
 		# Pick OCR language
 		langs = self.tool.get_available_languages()
-		#Debug.log(3, "Available languages {}".format(", ".join(langs)))
+		Debug.log(3, "Available languages {}".format(", ".join(langs)))
 		self.lang = langs[0]
-		#Debug.log(3, "Will use lang '{}'".format(lang))
+		Debug.log(3, "Will use lang '{}'".format(self.lang))
 
 		# Rescale image for better accuracy
 		nx, ny = img.size
@@ -52,7 +53,7 @@ class OCR(object):
 				match_components.append((ocr_word, confidence))
 				if matched_word == len(words):
 					# Complete match - yay!
-					# Get bounding box from match_components
+					# Get bounding box from match_components (correcting for earlier scaling)
 					x1 = min([m[0].position[0][0] for m in match_components])/3
 					y1 = min([m[0].position[0][1] for m in match_components])/3
 					x2 = max([m[0].position[1][0] for m in match_components])/3
