@@ -197,7 +197,8 @@ class PyramidTemplateMatcher(object):
             return None
         
         # There was a match!
-        return (position, needle.shape, confidence)
+        # Reverse `shape` to provide (width, height)
+        return (position, needle.shape[::-1], confidence)
 
     def findAllMatches(self, needle, similarity):
         """ Finds all matches above ``similarity`` using a search pyramid to improve efficiency

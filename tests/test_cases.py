@@ -87,7 +87,7 @@ class TestKeyboardMethods(unittest.TestCase):
 		self.kb.keyDown("{SHIFT}")
 		self.kb.keyUp("{CTRL}")
 		self.kb.keyUp("{SHIFT}")
-		self.kb.type("{CTRL}", lackey.Key.ALT)
+		self.kb.type("{CTRL}")
 		# Really this should check to make sure these keys have all been released, but 
 		# I'm not sure how to make that work without continuously monitoring the keyboard
 		# (which is the usual scenario). Ah well... if your computer is acting weird after
