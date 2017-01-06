@@ -1,4 +1,4 @@
-# Lackey v0.4.0a1 #
+# Lackey #
 ## A Graphical Python Automation Suite ##
 [![Documentation Status](https://readthedocs.org/projects/lackey/badge/?version=latest)](http://lackey.readthedocs.io/en/latest/?badge=latest) [![Build status](https://ci.appveyor.com/api/projects/status/l1q68dnp6vm8sre9?svg=true)](https://ci.appveyor.com/project/glitchassassin/lackey)
 
@@ -8,7 +8,8 @@ Developed by [Jon Winsley](https://github.com/glitchassassin)
 
 * numpy
 * pillow
-* opencv (included)
+* opencv
+* keyboard
 
 ## Introduction ##
 
@@ -34,7 +35,7 @@ The Lackey library is divided up into classes for finding and interacting with p
 
 If you've used Sikuli, you'll feel right at home. Lackey is designed to be a drop-in shim for Sikuli.
 
-Sample code:
+Sample code (note that you'll need to provide your own PNGs):
 
     from lackey import *
 
@@ -48,7 +49,7 @@ Full API documentation can be found at [ReadTheDocs](http://lackey.readthedocs.i
 
 ## Rationale ##
 
-In my line of work, I have a lot of tasks walking through line-of-business applications to do boring things that any computer could do. Laziness being the mother of invention, I decided to script what I could. I found [SikuliX](http://sikulix.com/) to be a tremendously valuable tool for the job, but its Java dependencies and limited Python coupling posed problems in several cases. So, I decided to implement my own graphical automation library in pure Python.
+In my line of work, I have a lot of tasks walking through line-of-business applications to do boring things that any computer could do. Laziness being the mother of invention, I decided to script what I could. I found [SikuliX](http://sikulix.com/) to be a tremendously valuable tool for the job, but its Java dependencies and limited Python coupling posed problems in several cases. So, I decided to create a pure Python implementation of Sikuli script.
 
 There are some existing libraries for this purpose, like `pywinauto` and `autopy`, but they didn't work for me for one reason or another. I wasn't doing a lot of Windows GUI interaction with these particular applications, so `pywinauto`'s approach wouldn't help. I needed something that could search for and use images on screen. `autopy` was closer, but it had quite a few outstanding issues and hadn't been updated in a while.
 
@@ -76,12 +77,22 @@ Don't forget to update the unit tests and verify that they still run.
 
 ## Fair Warning ##
 
-This library is currently under development, and is missing many features needed for full Sikuli compatibility (and may have serious bugs). Fork at your own risk!
+This library is currently under development, and is missing many features needed for full Sikuli compatibility (and may have serious bugs). Check the Issues list to find features/bugs you can help with!
 
 ## Build Instructions ##
 
-To build the wheel from source, run:
+To build the wheel from source, `cd` to the project directory and run:
 
     python setup.py bdist_wheel
 
-(Note that you may need to make sure `wheel` is installed)
+To link directly to the repository (if you want to work with the `develop` ring, for example), `cd` to the project directory and run:
+
+    pip install -e ./
+
+(Note that you may need to install the `wheel` package)
+
+## Special thanks ##
+
+Debugging contributions:
+
+* [maxdule](https://github.com/maxdule)
