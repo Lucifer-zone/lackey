@@ -7,6 +7,12 @@ import os
 #sys.path.insert(0, os.path.abspath('..'))
 import lackey
 
+# Python 3 compatibility
+try:
+    basestring
+except NameError:
+    basestring = str
+
 class TestLocationMethods(unittest.TestCase):
 	def setUp(self):
 		self.test_loc = lackey.Location(10, 11)
@@ -269,6 +275,9 @@ class TestInterfaces(unittest.TestCase):
 		self.assertHasMethod(lackey.PlatformManagerWindows, "isPIDValid", 2)
 		self.assertHasMethod(lackey.PlatformManagerWindows, "killProcess", 2)
 		self.assertHasMethod(lackey.PlatformManagerWindows, "getProcessName", 2)
+
+	def test_version(self):
+		print(lackey.__version__)
 
 
 	def assertHasMethod(self, cls, mthd, args=0):
