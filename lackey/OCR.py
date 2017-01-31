@@ -74,7 +74,8 @@ class OCR(object):
                 # No match - reset match components
                 matched_word = 0
                 match_components = []
-
+        # Sort matches by confidence
+        matches.sort(key=lambda x: x[2])
         return matches
 
     def editDistance(self, s1, s2):
